@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌾 Smart Agriculture Monitor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    /* ── Design System ──────────────────────────────────── */
+    :root {
+      --bg:       #0d1117;
+      --card:     #161b22;
+      --border:   rgba(48,54,61,0.8);
+      --green:    #3fb950;
+      --yellow:   #d29922;
+      --red:      #f85149;
+      --blue:     #58a6ff;
+      --purple:   #bc8cff;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(63,185,80,0); }
+    }
+
+    /* ── Main Layout ─────────────────────────────────────── */
+    main { max-width: 1300px; margin: 0 auto; padding: 24px 20px; }
+
+    /* ── Stat Cards Grid ─────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: var(--blue); }
+
+    .card-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .card-value { font-size: 2rem; font-weight: 700; }
+    .card-unit  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Pump Status Card ────────────────────────────────── */
+    .pump-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .pump-indicator {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      transition: all 0.3s;
+    }
+
+    .pump-on  { background: rgba(63,185,80,0.2);  border: 2px solid var(--green); }
+    .pump-off { background: rgba(139,148,158,0.1); border: 2px solid var(--border); }
+
+    /* ── Charts Section ──────────────────────────────────── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .chart-card h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Alerts Panel ────────────────────────────────────── */
+    .alerts-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .alerts-card h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; }
+
+    .alert-item {
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      border-left: 3px solid;
+    }
+
+    .alert-warn { background: rgba(210,153,34,0.1);  border-color: var(--yellow); color: var(--yellow); }
+    .alert-danger{ background: rgba(248,81,73,0.1);  border-color: var(--red);    color: var(--red);    }
+    .alert-ok   { background: rgba(63,185,80,0.1);   border-color: var(--green);  color: var(--green);  }
+
+    /* ── Timestamp ───────────────────────────────────────── */
+    .timestamp { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>
+    🌾 Smart Agriculture Monitor
+    <span class="status-dot"></span>
+    <span style="font-size:13px; color:var(--muted); font-weight:400;">LIVE</span>
+  </h1>
+  <span class="timestamp" id="last-updated">Connecting...</span>
+</header>
+
+<main>
+
+  <!-- ── Sensor Cards ───────────────────────────────────── -->
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-icon">🌱</div>
+      <div class="card-label">Soil Moisture</div>
+      <div class="card-value" id="val-soil" style="color:#3fb950">--</div>
+      <div class="card-unit">%</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌡️</div>
+      <div class="card-label">Temperature</div>
+      <div class="card-value" id="val-temp" style="color:#f85149">--</div>
+      <div class="card-unit">°C</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💧</div>
+      <div class="card-label">Humidity</div>
+      <div class="card-value" id="val-hum" style="color:#58a6ff">--</div>
+      <div class="card-unit">%</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">☀️</div>
+      <div class="card-label">Light Intensity</div>
+      <div class="card-value" id="val-light" style="color:#d29922">--</div>
+      <div class="card-unit">lux</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🪣</div>
+      <div class="card-label">Water Level</div>
+      <div class="card-value" id="val-water" style="color:#bc8cff">--</div>
+      <div class="card-unit">%</div>
+    </div>
+
+    <!-- Pump Status card -->
+    <div class="pump-card">
+      <div class="pump-indicator" id="pump-indicator">🚿</div>
+      <div>
+        <div class="card-label">Water Pump</div>
+        <div class="card-value" id="pump-status" style="font-size:1.4rem">--</div>
+        <div class="card-unit" id="pump-label">Irrigation control</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alerts ─────────────────────────────────────────── -->
+  <div class="alerts-card">
+    <h3>⚡ Active Alerts</h3>
+    <div id="alerts-container">
+      <div class="alert-item alert-ok">✅ Waiting for data...</div>
+    </div>
+  </div>
+
+  <!-- ── Charts ─────────────────────────────────────────── -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Soil Moisture & Water Level (last 20 readings)</h3>
+      <canvas id="soilChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Temperature & Humidity (last 20 readings)</h3>
+      <canvas id="tempChart" height="180"></canvas>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Chart Setup ───────────────────────────────────────────────
+const chartOptions = {
+  responsive: true,
+  animation: { duration: 300 },
+  plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#8b949e', font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+    y: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+  }
+};
+
+// Soil & Water chart
+const soilChart = new Chart(document.getElementById('soilChart'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'Soil Moisture %', data: [], borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', fill: true, tension: 0.4 },
+      { label: 'Water Level %',   data: [], borderColor: '#bc8cff', backgroundColor: 'rgba(188,140,255,0.1)', fill: true, tension: 0.4 }
+    ]
+  },
+  options: chartOptions
+});
+
+// Temperature & Humidity chart
+const tempChart = new Chart(document.getElementById('tempChart'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'Temperature °C', data: [], borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.1)', fill: true, tension: 0.4 },
+      { label: 'Humidity %',     data: [], borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', fill: true, tension: 0.4 }
+    ]
+  },
+  options: chartOptions
+});
+
+// Helper: push data to chart, keep max 20 points
+function pushToChart(chart, label, ...values) {
+  chart.data.labels.push(label);
+  values.forEach((v, i) => chart.data.datasets[i].data.push(v));
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(d => d.data.shift());
+  }
+  chart.update();
+}
+
+// ── Poll API every 3 seconds ──────────────────────────────────
+async function fetchLatest() {
+  try {
+    const res = await fetch('/api/latest');
+    const json = await res.json();
+    const d = json.data;
+
+    if (!d.timestamp) return;
+
+    // Update stat cards
+    document.getElementById('val-soil').textContent  = d.soil_moisture;
+    document.getElementById('val-temp').textContent  = d.temperature;
+    document.getElementById('val-hum').textContent   = d.humidity;
+    document.getElementById('val-light').textContent = d.light_intensity;
+    document.getElementById('val-water').textContent = d.water_level;
+    document.getElementById('last-updated').textContent = 'Updated: ' + d.timestamp;
+
+    // Update pump status
+    const pumpOn = json.pump === 'ON';
+    document.getElementById('pump-status').textContent = json.pump;
+    document.getElementById('pump-status').style.color = pumpOn ? '#3fb950' : '#8b949e';
+    document.getElementById('pump-indicator').className = 'pump-indicator ' + (pumpOn ? 'pump-on' : 'pump-off');
+    document.getElementById('pump-label').textContent = pumpOn ? 'Irrigation ACTIVE' : 'Irrigation IDLE';
+
+    // Update alerts
+    const alertsDiv = document.getElementById('alerts-container');
+    if (json.alerts.length === 0) {
+      alertsDiv.innerHTML = '<div class="alert-item alert-ok">✅ All parameters within normal range</div>';
+    } else {
+      alertsDiv.innerHTML = json.alerts.map(a => {
+        const cls = a.includes('🚨') || a.includes('⚠️') ? 'alert-danger' : 'alert-warn';
+        return `<div class="alert-item ${cls}">${a}</div>`;
+      }).join('');
+    }
+
+    // Push to charts (use short time label)
+    const timeLabel = d.timestamp.split(' ')[1].substring(0, 5);
+    pushToChart(soilChart, timeLabel, d.soil_moisture, d.water_level);
+    pushToChart(tempChart, timeLabel, d.temperature, d.humidity);
+
+  } catch (e) {
+    console.error('Fetch error:', e);
+  }
+}
+
+// Start polling
+fetchLatest();
+setInterval(fetchLatest, 3000);
+</script>
+
+</body>
+</html>
