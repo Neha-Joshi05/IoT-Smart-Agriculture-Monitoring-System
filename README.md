@@ -1,5 +1,7 @@
 # 🌾 IoT-Enabled Smart Agriculture Monitoring System
 
+## 🌐 Live Demo → https://iot-smart-agriculture-monitoring-system.onrender.com
+
 > A Python-based simulation of an IoT smart farming system that monitors soil moisture, temperature, humidity, light intensity, and water level — with automated irrigation control and a live web dashboard.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
